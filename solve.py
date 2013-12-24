@@ -103,7 +103,7 @@ class PackageCacheGenerator(object):
 
   def add(self, package_path):
     if os.path.isdir(package_path):
-      self.packages = PackageCacheGenerator.sprinkle(self.packages, None, [package_path])
+      self.packages = PackageCacheGenerator.sprinkle(self.packages, None, package_path)
     else:
       for m in re.finditer(r'([A-Za-z0-9$/]+)\.class$', subprocess.check_output('jar -tvf %s' % package_path, shell=True), flags=re.MULTILINE):
         qualified = m.group(1).replace(os.sep, '.')

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # solve-imports.py: Crude import solver.
-# Copyright 2013 Takahiro Yoshimura
+# Copyright 2013 Takahiro Yoshimura <altakey@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+#
+# Usage example 1. from shell:
+# $ solve-imports.py --cache-file=~/.solver.cache --classpath=/path/to/li
+# bs/android-support-v4.jar:/usr/local/android-sdk/platforms/android-19/a
+# ndroid.jar:/path/to/android/library/src/ /path/to/target.java
+# import .....
+# import .....
+# ....
+#
+# Usage example 2. from elisp:
+# (defun solve-imports ()
+#   (interactive)
+#   (shell-command-on-region
+#    (region-beginning) (region-end)
+#    (format "python /path/to/solve.py --cache-file=... %s"
+#            (buffer-file-name))
+#    t
+#    t))
+#
+# ... Then, bind this defun to some key, select import block and invoke over it.
 #
 from __future__ import print_function
 import re

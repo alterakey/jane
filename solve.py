@@ -75,15 +75,15 @@ class JavaSourceParser(object):
       'Exception', 'Runnable'
     ])
 
-    for m in re.finditer(r'(?:(?P<op>package|new|import|implements|extends|enum|private|public|protected|final|static|class|interface|volatile|synchronized) )+(?P<class>[A-Za-z0-9_.*]+)|\b(?P<class_in_context>[A-Z][A-Za-z0-9_]*(\.[A-Z][A-Za-z0-9_]*)*)(?:\.(?!>\.)|\b)', self.f.read()):
-      class_ = m.group('class') is not None and m.group('class') or m.group('class_in_context')
+    for m in re.finditer(r'\b(?P<constant_lookalikes>[A-Z0-9_]+)\b\s*?=\s*?|(?:(?P<op>package|new|import|implements|extends|enum|private|public|protected|final|static|class|interface|volatile|synchronized) )+(?P<class>[A-Za-z0-9_.*]+)|\b(?P<class_in_context>[A-Z][A-Za-z0-9_]*(\.[A-Z][A-Za-z0-9_]*)*)(?:\.(?!>\.)|\b)', self.f.read()):
+      class_ = filter(None, (m.group('class'), m.group('class_in_context'), m.group('constant_lookalikes')))[0]
       op = {
         'package': 'namespace',
         'import': 'imports',
         'class': 'defines',
         'interface': 'defines',
-        'enum': 'defines'
-      }.get(m.group('op'), 'uses')
+        'enum': 'defines',
+      }.get(m.group('op'), m.group('constant_lookalikes') is not None and 'defines' or 'uses')
       if class_ not in intrinsic:
         if op == 'defines':
           symbols.defines.append(class_)

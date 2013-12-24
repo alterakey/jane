@@ -42,6 +42,7 @@ import gzip
 import json
 import subprocess
 import os.path
+from xml.etree import cElementTree as ET
 
 class SymbolMap(object):
   def __init__(self):
@@ -70,7 +71,7 @@ class JavaSourceParser(object):
     symbols = SymbolMap()
     intrinsic = frozenset([
       'int', 'boolean', 'byte', 'char', 'double', 'float', 'long', 'void', 
-      'Integer', 'Boolean', 'Char', 'Double', 'Float', 'Long', 'Void', 
+      'Integer', 'Boolean', 'Char', 'Double', 'Float', 'Long', 'String', 'Void', 
       'Exception', 'Runnable'
     ])
 
@@ -103,7 +104,12 @@ class ImportSolver(object):
     for sym in self.symbols.uses:
       try:
         target = self.packages[sym]
-        resolved.add(target)
+        if target == ('java.lang.%s' % sym):
+          target = None
+        if target == 'android.R':
+          target = '%s.R' % self.packages['*sprinkle:package']
+        if target is not None:
+          resolved.add(target)
       except KeyError:
         if sym not in self.symbols.defines:
           pass
@@ -169,15 +175,29 @@ class PackageCacheGenerator(object):
 
   @staticmethod
   def sprinkle(packages, namespace, source_path):
+    package_root = None
     path = os.path.dirname(os.path.realpath(source_path))
     root = namespace is not None and path.replace(namespace.replace('.', os.sep), '') or path
     for root, dirlist, filelist in os.walk(root):
       if root is None or root != path:
+        if package_root is None:
+          for p in '.', '..':
+            try:
+              with open(os.path.join(root, p, 'AndroidManifest.xml'), 'rb') as f:
+                try:
+                  package_root = ET.parse(f).getroot().attrib['package']
+                except:
+                  print("! cannot parse AndroidManifest.xml: cannot determine package name: %s" % sys.exc_info()[1], file=sys.stderr)
+            except IOError, e:
+              pass
         for filename in filter(lambda x: x.endswith('.java'), filelist):
           with open(os.path.join(root, filename), 'rb') as f:
             dep = JavaSourceParser(f).parse()
             for scope, define in dep.scoped_defines():
               packages[define] = '%s.%s' % (dep.namespace, scope)
+
+    if package_root is not None:
+      packages['*sprinkle:package'] = package_root
 
   def generate(self):
     with gzip.GzipFile(self.cache_file, 'wb') as f:

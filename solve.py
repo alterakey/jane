@@ -74,7 +74,7 @@ class JavaSourceParser(object):
       'Exception', 'Runnable'
     ])
 
-    for m in re.finditer(r'(?:(?P<op>package|new|import|implements|extends|enum|private|public|protected|final|static|class|interface|volatile|synchronized) )+(?P<class>[A-Za-z0-9_.*]+)|\b(?P<class_in_context>[A-Z][A-Za-z0-9_.]*)\.', self.f.read()):
+    for m in re.finditer(r'(?:(?P<op>package|new|import|implements|extends|enum|private|public|protected|final|static|class|interface|volatile|synchronized) )+(?P<class>[A-Za-z0-9_.*]+)|\b(?P<class_in_context>[A-Z][A-Za-z0-9_]*(\.[A-Z][A-Za-z0-9_]*)*)(?:\.(?!>\.)|\b)', self.f.read()):
       class_ = m.group('class') is not None and m.group('class') or m.group('class_in_context')
       op = {
         'package': 'namespace',

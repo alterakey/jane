@@ -104,6 +104,8 @@ class ImportSolver(object):
     for sym in self.symbols.uses:
       try:
         target = self.packages[sym]
+        if ImportSolver.dequalified(target) in (ImportSolver.dequalified(package) for package in resolved):
+          target = None
         if target == ('java.lang.%s' % sym):
           target = None
         if target == 'android.R':
@@ -115,6 +117,10 @@ class ImportSolver(object):
           pass
     resolved -= set(self.symbols.defines)
     return resolved
+
+  @staticmethod
+  def dequalified(qualified):
+    return qualified.split('.')[-1]
 
 class PackageCacheGenerator(object):
   def __init__(self, cache_file, classpath):

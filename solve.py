@@ -74,15 +74,15 @@ class JavaSourceParser(object):
       'Exception', 'Runnable'
     ])
 
-    for m in re.finditer(r'(?:(package|new|import|implements|extends|enum|private|public|protected|final|static|class|interface|volatile|synchronized) )+([A-Za-z0-9_.*]+)', self.f.read()):
-      class_ = m.group(2)
+    for m in re.finditer(r'(?:(?P<op>package|new|import|implements|extends|enum|private|public|protected|final|static|class|interface|volatile|synchronized) )+(?P<class>[A-Za-z0-9_.*]+)|\b(?P<class_in_context>[A-Z][A-Za-z0-9_.]*)\.', self.f.read()):
+      class_ = m.group('class') is not None and m.group('class') or m.group('class_in_context')
       op = {
         'package': 'namespace',
         'import': 'imports',
         'class': 'defines',
         'interface': 'defines',
         'enum': 'defines'
-      }.get(m.group(1), 'uses')
+      }.get(m.group('op'), 'uses')
       if class_ not in intrinsic:
         if op == 'defines':
           symbols.defines.append(class_)

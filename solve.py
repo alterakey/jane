@@ -82,11 +82,10 @@ class ImportSolver(object):
     for sym in self.symbols.uses:
       try:
         target = self.packages[sym]
-        print('%s -> %s' % (sym, target), file=sys.stderr)
         resolved.add(target)
       except KeyError:
         if sym not in self.symbols.defines:
-          print('?: %s' % sym, file=sys.stderr)
+          pass
     resolved -= set(self.symbols.defines)
     return resolved
 

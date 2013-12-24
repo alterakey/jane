@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# solve.py: Crude import solver.
+# solve-imports.py: Crude import solver.
 # Copyright 2013 Takahiro Yoshimura
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

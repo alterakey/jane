@@ -101,7 +101,7 @@ class ImportSolver(object):
 
   def solve(self):
     resolved = set(self.symbols.imports)
-    for sym in self.symbols.uses:
+    for sym in (ImportSolver.constant_ref_degraded(s) for s in self.symbols.uses):
       try:
         target = self.packages[sym]
         if ImportSolver.dequalified(target) in (ImportSolver.dequalified(package) for package in resolved):
@@ -115,12 +115,17 @@ class ImportSolver(object):
       except KeyError:
         if sym not in self.symbols.defines:
           pass
+
     resolved -= set(self.symbols.defines)
     return resolved
 
   @staticmethod
   def dequalified(qualified):
     return qualified.split('.')[-1]
+
+  @staticmethod
+  def constant_ref_degraded(qualified):
+    return re.sub(r'\.(?:[A-Z0-9_]+|[a-z0-9_]+)$', '', qualified)
 
 class PackageCacheGenerator(object):
   def __init__(self, cache_file, classpath):

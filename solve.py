@@ -149,16 +149,15 @@ class PackageCacheGenerator(object):
 
   @staticmethod
   def sprinkle(packages, namespace, source_path):
-    for path in source_path:
-        path = os.path.dirname(os.path.realpath(path))
-        root = namespace is not None and path.replace(namespace.replace('.', os.sep), '') or path
-        for root, dirlist, filelist in os.walk(root):
-          if root is None or root != path:
-            for filename in filter(lambda x: x.endswith('.java'), filelist):
-              with open(os.path.join(root, filename), 'rb') as f:
-                dep = JavaSourceParser(f).parse()
-                for scope, define in dep.scoped_defines():
-                  packages[define] = '%s.%s' % (dep.namespace, scope)
+    path = os.path.dirname(os.path.realpath(source_path))
+    root = namespace is not None and path.replace(namespace.replace('.', os.sep), '') or path
+    for root, dirlist, filelist in os.walk(root):
+      if root is None or root != path:
+        for filename in filter(lambda x: x.endswith('.java'), filelist):
+          with open(os.path.join(root, filename), 'rb') as f:
+            dep = JavaSourceParser(f).parse()
+            for scope, define in dep.scoped_defines():
+              packages[define] = '%s.%s' % (dep.namespace, scope)
                     
     return packages
 
@@ -187,7 +186,7 @@ if __name__ == '__main__':
 
   def help():
     print('''\
-    usage: %s --classpath=<jar|source_path>:... <buffer file name> < (buffer content)
+    usage: %s --classpath=<jar|source_path>:... <target file>
 ''')
     sys.exit(2)
   
@@ -196,9 +195,12 @@ if __name__ == '__main__':
     for k, v in opts:
       if k in ('c', '--classpath'): classpath = v.split(':')
       if k in ('f', '--cache-file'): cache_file = os.path.expanduser(v)
-    source_path = arg
+    target = arg[0]
   except getopt.GetoptError, e:
-    print('cannot parse options: %s' % e, file=sys.stderr)
+    print('Cannot parse options: %s' % e, file=sys.stderr)
+    help()
+  except IndexError, e:
+    print('You need target file', file=sys.stderr)
     help()
 
   if not classpath:
@@ -209,5 +211,6 @@ if __name__ == '__main__':
   if cacher.needs_update():
     cacher.update().generate()
 
-  for import_ in sorted(ImportSolver(JavaSourceParser(sys.stdin).parse(), PackageCacheLoader(cache_file).load(), source_path).solve()):
-    print('import %s;' % import_)
+  with open(target, 'r') as f:
+    for import_ in sorted(ImportSolver(JavaSourceParser(f).parse(), PackageCacheLoader(cache_file).load(), target).solve()):
+      print('import %s;' % import_)

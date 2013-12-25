@@ -75,7 +75,7 @@ class JavaSourceParser(object):
       'Exception', 'Runnable'
     ])
 
-    for m in re.finditer(r'\b(?P<constant_lookalikes>[A-Z0-9_]+)\b\s*?=\s*?|(?:(?P<op>package|new|import|implements|extends|enum|private|public|protected|final|static|class|interface|volatile|synchronized) )+(?P<class>[A-Za-z0-9_.*]+)|\b(?P<class_in_context>[A-Z][A-Za-z0-9_]*(\.[A-Z][A-Za-z0-9_]*)*)(?:\.(?!>\.)|\b)', self.f.read()):
+    for m in re.finditer(r'\b(?P<constant_lookalikes>[A-Z0-9_]+|[a-z0-9_]+)\b\s*?=\s*?|(?:(?P<op>package|new|import|implements|extends|enum|private|public|protected|final|static|class|interface|volatile|synchronized|abstract) )+(?P<class>[A-Za-z0-9_.*]+)|\b(?P<class_in_context>[A-Z][A-Za-z0-9_]*(\.[A-Z][A-Za-z0-9_]*)*)(?:\.(?!>\.)|\b)', self.f.read()):
       class_ = filter(None, (m.group('class'), m.group('class_in_context'), m.group('constant_lookalikes')))[0]
       op = {
         'package': 'namespace',

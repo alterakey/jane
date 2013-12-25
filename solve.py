@@ -42,6 +42,7 @@ import gzip
 import json
 import subprocess
 import os.path
+import ConfigParser
 from xml.etree import cElementTree as ET
 
 class SymbolMap(object):
@@ -235,13 +236,30 @@ if __name__ == '__main__':
 
   def help():
     print('''\
-usage: %s --classpath=<jar|source_path>:... <target file>
+usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path>:...] [--cache-file=<cache file>] <target file>
 ''' % sys.argv[0])
     sys.exit(2)
   
   try:
-    opts, arg = getopt.getopt(sys.argv[1:], 'c:f:', ['classpath=', 'cache-file='])
+    opts, arg = getopt.getopt(sys.argv[1:], 'p:c:f:', ['profile=','classpath=', 'cache-file='])
     for k, v in opts:
+      if k in ('p', '--profile'):
+        config_file, profile_name = v.split(':')
+        parser = ConfigParser.SafeConfigParser()
+        try:
+          with open(os.path.expanduser(config_file), 'r') as f:
+            parser.readfp(f)
+          try:
+            classpath = parser.get(profile_name, 'classpath')
+          except ConfigParser.NoOptionError:
+            pass
+          try:
+            cache_file = parser.get(profile_name, 'cache-file')
+          except ConfigParser.NoOptionError:
+            pass
+        except ConfigParser.NoSectionError:
+          print('Cannot find profile: %s' % profile_name, file=sys.stderr)
+          help()
       if k in ('c', '--classpath'): classpath = v.split(':')
       if k in ('f', '--cache-file'): cache_file = os.path.expanduser(v)
     target = arg[0]
@@ -253,7 +271,7 @@ usage: %s --classpath=<jar|source_path>:... <target file>
     help()
 
   if not classpath:
-    print('You need classpath', file=sys.stderr)
+    print('You need to set profile or classpath', file=sys.stderr)
     help()
 
   cacher = PackageCacheGenerator(cache_file, classpath)

@@ -251,16 +251,18 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
             parser.readfp(f)
           try:
             classpath = parser.get(profile_name, 'classpath')
+            classpath = [os.path.expanduser(component) for component in classpath.split(':')]
           except ConfigParser.NoOptionError:
             pass
           try:
             cache_file = parser.get(profile_name, 'cache-file')
+            cache_file = os.path.expanduser(cache_file)
           except ConfigParser.NoOptionError:
             pass
         except ConfigParser.NoSectionError:
           print('Cannot find profile: %s' % profile_name, file=sys.stderr)
           help()
-      if k in ('c', '--classpath'): classpath = v.split(':')
+      if k in ('c', '--classpath'): classpath = [os.path.expanduser(component) for component in v.split(':')]
       if k in ('f', '--cache-file'): cache_file = os.path.expanduser(v)
     target = arg[0]
   except getopt.GetoptError, e:

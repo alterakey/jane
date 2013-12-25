@@ -235,8 +235,8 @@ if __name__ == '__main__':
 
   def help():
     print('''\
-    usage: %s --classpath=<jar|source_path>:... <target file>
-''')
+usage: %s --classpath=<jar|source_path>:... <target file>
+''' % sys.argv[0])
     sys.exit(2)
   
   try:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# solve-imports.py: Crude import solver.
+# solve.py: Crude import solver.
 # Copyright 2013 Takahiro Yoshimura <altakey@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,21 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Usage scenarios with config file, written as follows, is at ~/solver.ini:
+# [my-project]
+# cache-file=~/.solver.myproject.cache
+# classpath=/usr/local/android-sdk/extras/android/support/v4/android-supp
+# ort-v4.jar:/usr/local/android-sdk/platforms/android-19/android.jar:/pat
+# h/to/android/library/src/ /path/to/target.java
 #
-# Usage example 1. from shell:
-# $ solve-imports.py --cache-file=~/.solver.cache --classpath=/path/to/li
-# bs/android-support-v4.jar:/usr/local/android-sdk/platforms/android-19/a
-# ndroid.jar:/path/to/android/library/src/ /path/to/target.java
+# 1. From shell:
+# $ solve.py --profile ~/solver.ini:my-project /path/to/target.java
 # import .....
 # import .....
 # ....
 #
-# Usage example 2. from elisp:
+# 2. From elisp:
 # (defun solve-imports ()
 #   (interactive)
 #   (shell-command-on-region
 #    (region-beginning) (region-end)
-#    (format "python /path/to/solve.py --cache-file=... %s"
+#    (format "python /path/to/solve.py --profile=~/solver.ini:my-project %s"
 #            (buffer-file-name))
 #    t
 #    t))

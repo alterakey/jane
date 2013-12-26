@@ -155,9 +155,12 @@ class PackageCacheGenerator(object):
           target = []
           for inner in packagename.split('$'):
             target.append(inner)
-            self.packages['.'.join(target)] = root
+            decorated = '.'.join(target)
+            if decorated not in self.packages:
+              self.packages[decorated] = root
         else:
-          self.packages[packagename] = qualified
+          if packagename not in self.packages:
+            self.packages[packagename] = qualified
       
     return self
 

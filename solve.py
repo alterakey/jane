@@ -106,7 +106,8 @@ class ImportSolver(object):
 
   def solve(self):
     resolved = set(self.symbols.imports)
-    for sym in (ImportSolver.constant_ref_degraded(s) for s in self.symbols.uses):
+    references = (self.symbols.uses - set(self.symbols.defines))
+    for sym in (ImportSolver.constant_ref_degraded(s) for s in references):
       try:
         target = self.packages[sym]
         if ImportSolver.dequalified(target) in (ImportSolver.dequalified(package) for package in resolved):
@@ -122,7 +123,6 @@ class ImportSolver(object):
         if sym not in self.symbols.defines:
           pass
 
-    resolved -= set(self.symbols.defines)
     return resolved
 
   @staticmethod

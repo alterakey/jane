@@ -116,7 +116,8 @@ class ImportSolver(object):
         if target == 'android.R':
           target = '%s.R' % self.packages['*sprinkle:package']
         if target is not None:
-          resolved.add(target)
+          if ImportSolver.namespace(target) != self.symbols.namespace:
+            resolved.add(target)
       except KeyError:
         if sym not in self.symbols.defines:
           pass
@@ -127,6 +128,10 @@ class ImportSolver(object):
   @staticmethod
   def dequalified(qualified):
     return qualified.split('.')[-1]
+
+  @staticmethod
+  def namespace(qualified):
+    return '.'.join(qualified.split('.')[:-1])
 
   @staticmethod
   def constant_ref_degraded(qualified):

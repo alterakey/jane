@@ -253,7 +253,13 @@ if __name__ == '__main__':
 usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path>:...] [--cache-file=<cache file>] <target file>
 ''' % sys.argv[0])
     sys.exit(2)
+
+  def expand_classpath(classpath):
+    return [p for p in itertools.chain(*[glob.iglob(os.path.expanduser(component)) for component in classpath.split(':')])]
   
+  def expand_cache_file(cache_file):
+    return os.path.expanduser(cache_file)
+
   try:
     opts, arg = getopt.getopt(sys.argv[1:], 'p:c:f:', ['profile=','classpath=', 'cache-file='])
     for k, v in opts:
@@ -264,20 +270,18 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
           with open(os.path.expanduser(config_file), 'r') as f:
             parser.readfp(f)
           try:
-            classpath = parser.get(profile_name, 'classpath')
-            classpath = [p for p in itertools.chain(*[glob.iglob(os.path.expanduser(component)) for component in classpath.split(':')])]
+            classpath = expand_classpath(parser.get(profile_name, 'classpath'))
           except ConfigParser.NoOptionError:
             pass
           try:
-            cache_file = parser.get(profile_name, 'cache-file')
-            cache_file = os.path.expanduser(cache_file)
+            cache_file = expand_cache_file(parser.get(profile_name, 'cache-file'))
           except ConfigParser.NoOptionError:
             pass
         except ConfigParser.NoSectionError:
           print('Cannot find profile: %s' % profile_name, file=sys.stderr)
           help()
-      if k in ('c', '--classpath'): classpath = [p for p in itertools.chain(*[glob.iglob(os.path.expanduser(component)) for component in v.split(':')])]
-      if k in ('f', '--cache-file'): cache_file = os.path.expanduser(v)
+      if k in ('c', '--classpath'): classpath = expand_classpath(v)
+      if k in ('f', '--cache-file'): cache_file = expand_cache_file(v)
     target = arg[0]
   except getopt.GetoptError, e:
     print('Cannot parse options: %s' % e, file=sys.stderr)

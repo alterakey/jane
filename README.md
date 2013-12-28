@@ -9,7 +9,7 @@ This is a crude import solver for Java (esp. Android) that doesn't suck too much
 0. HOW TO USE
 =============
 
-Sample config file:
+Say you have config file in ~/.solverrc:
 
     $ cat etc/solver.ini
     [native]
@@ -20,14 +20,33 @@ Sample config file:
     cache-file=~/.solver.cache
     classpath=/usr/local/android-sdk/platforms/android-19/android.jar:/usr/local/android-sdk/extras/android/support/v4/android-support-v4.jar
 
-Using from shell:
+With project:
 
-    $ solve.py --profile=etc/solver.ini:native /path/to/target.java
+    $ ls 
+    AndroidManifest.xml
+    ...
+    local.properties
+    ...
+    $ cat local.properties
+    ...
+    jane.profile = native
+
+Then, you could do:
+
+    $ solve.py --profile=~/.solverrc src/path/to/target.java
     import .....
     import .....
     ....
 
-From Elisp:
+You can pick some other profile:
+
+    $ solve.py --profile=~/.solverrc:v4 src/path/to/target.java
+    import .....
+    import .....
+    ....
+
+
+If you use emacs, you could put the following to your .emacs to get your lengthy import block generated with quick "C-:":
 
     $ cat ~/.emacs
     ...
@@ -35,11 +54,10 @@ From Elisp:
       (interactive)
       (shell-command-on-region
         (region-beginning) (region-end)
-        (format "python /path/to/solve.py --profile=/path/to/solver.ini:native %s"
+        (format "/path/to/solve.py --profile=~/.solverrc %s"
           (buffer-file-name))
           t t))
     
-    ;; Then, bind this defun to some key, select import block and invoke over it.
     (global-set-key (kbd "C-:") 'solve-imports)
 
 

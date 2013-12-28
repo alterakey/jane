@@ -47,6 +47,8 @@ import json
 import subprocess
 import os.path
 import ConfigParser
+import glob
+import itertools
 from xml.etree import cElementTree as ET
 
 class SymbolMap(object):
@@ -263,7 +265,7 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
             parser.readfp(f)
           try:
             classpath = parser.get(profile_name, 'classpath')
-            classpath = [os.path.expanduser(component) for component in classpath.split(':')]
+            classpath = [p for p in itertools.chain(*[glob.iglob(os.path.expanduser(component)) for component in classpath.split(':')])]
           except ConfigParser.NoOptionError:
             pass
           try:
@@ -274,7 +276,7 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
         except ConfigParser.NoSectionError:
           print('Cannot find profile: %s' % profile_name, file=sys.stderr)
           help()
-      if k in ('c', '--classpath'): classpath = [os.path.expanduser(component) for component in v.split(':')]
+      if k in ('c', '--classpath'): classpath = [p for p in itertools.chain(*[glob.iglob(os.path.expanduser(component)) for component in v.split(':')])]
       if k in ('f', '--cache-file'): cache_file = os.path.expanduser(v)
     target = arg[0]
   except getopt.GetoptError, e:

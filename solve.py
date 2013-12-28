@@ -299,7 +299,7 @@ if __name__ == '__main__':
   import getopt
 
   classpath = None
-  cache_file = 'packages.cache.gz'
+  cache_file = None
   config_file = None
 
   def help():
@@ -328,10 +328,6 @@ usage: %s [--profile=<config file>[:<profile name>]] [--classpath=<jar|source_pa
     help()
   except IndexError, e:
     print('You need target file', file=sys.stderr)
-    help()
-
-  if not classpath and not config_file:
-    print('You need to set profile or classpath', file=sys.stderr)
     help()
 
   with open(target, 'r') as f:
@@ -365,6 +361,10 @@ usage: %s [--profile=<config file>[:<profile name>]] [--classpath=<jar|source_pa
       except ConfigParser.NoSectionError:
         print('Cannot find profile: %s' % profile, file=sys.stderr)
         help()
+
+    if not classpath or not cache_file:
+      print('You need to set profile or classpath/cache-file', file=sys.stderr)
+      help()
 
     cacher = PackageCacheGenerator(cache_file, ClasspathExpander(symbols, target).expand(classpath))
     if cacher.needs_update():

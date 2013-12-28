@@ -9,15 +9,15 @@ This is a crude import solver for Java (esp. Android) that doesn't suck too much
 0. HOW TO USE
 =============
 
-Say you have config file in ~/.solverrc:
+Say you have config file in ~/.janerc:
 
-    $ cat etc/solver.ini
+    $ cat .janerc
     [native]
-    cache-file=~/.solver.cache
+    cache-file=~/.jane.cache
     classpath=/usr/local/android-sdk/platforms/android-19/android.jar
     
     [v4]
-    cache-file=~/.solver.cache
+    cache-file=~/.jane.cache
     classpath=/usr/local/android-sdk/platforms/android-19/android.jar:/usr/local/android-sdk/extras/android/support/v4/android-support-v4.jar
 
 With project:
@@ -33,14 +33,14 @@ With project:
 
 Then, you could do:
 
-    $ solve.py --profile=~/.solverrc src/path/to/target.java
+    $ solve.py --profile=~/.janerc src/path/to/target.java
     import .....
     import .....
     ....
 
 You can pick some other profile:
 
-    $ solve.py --profile=~/.solverrc:v4 src/path/to/target.java
+    $ solve.py --profile=~/.janerc:v4 src/path/to/target.java
     import .....
     import .....
     ....
@@ -54,7 +54,7 @@ If you use emacs, you could put the following to your .emacs to get your lengthy
       (interactive)
       (shell-command-on-region
         (region-beginning) (region-end)
-        (format "/path/to/solve.py --profile=~/.solverrc %s"
+        (format "/path/to/solve.py --profile=~/.janerc %s"
           (buffer-file-name))
           t t))
     

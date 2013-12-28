@@ -241,6 +241,38 @@ class PackageCacheLoader(object):
     with gzip.GzipFile(cache_file, 'rb') as f:
       return json.load(f)['packages']
 
+class ClasspathExpander(object):
+  def __init__(self, symbols, target):
+    self.symbols = symbols
+    self.target = target
+    self._cache_project_root = None
+
+  def expand(self, classpath):
+    return [p for p in itertools.chain(*[glob.iglob(self.normalize(component)) for component in classpath.split(':')])]
+
+  def normalize(self, component):
+    expanded = os.path.expanduser(component)
+    if not expanded.startswith(os.sep):
+      return os.path.join(self.project_root(), expanded)
+    else:
+      return expanded
+
+  def project_root(self):
+    if self._cache_project_root is None:
+      path = os.path.dirname(os.path.realpath(self.target))
+      root = path.replace(self.symbols.namespace.replace('.', os.sep), '')
+      for p in ClasspathExpander.look_parent_to(5):
+        look = os.path.join(root, p)
+        if os.path.exists(os.path.join(look, 'AndroidManifest.xml')):
+          self._cache_project_root = os.path.realpath(look)
+    return self._cache_project_root
+
+  @staticmethod
+  def look_parent_to(level):
+    yield '.%s' % os.sep
+    for i in xrange(level):
+      yield ('..%s' % os.sep) * i
+
 if __name__ == '__main__':
   import sys
   import getopt
@@ -254,9 +286,6 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
 ''' % sys.argv[0])
     sys.exit(2)
 
-  def expand_classpath(classpath):
-    return [p for p in itertools.chain(*[glob.iglob(os.path.expanduser(component)) for component in classpath.split(':')])]
-  
   def expand_cache_file(cache_file):
     return os.path.expanduser(cache_file)
 
@@ -270,7 +299,7 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
           with open(os.path.expanduser(config_file), 'r') as f:
             parser.readfp(f)
           try:
-            classpath = expand_classpath(parser.get(profile_name, 'classpath'))
+            classpath = parser.get(profile_name, 'classpath')
           except ConfigParser.NoOptionError:
             pass
           try:
@@ -280,7 +309,7 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
         except ConfigParser.NoSectionError:
           print('Cannot find profile: %s' % profile_name, file=sys.stderr)
           help()
-      if k in ('c', '--classpath'): classpath = expand_classpath(v)
+      if k in ('c', '--classpath'): classpath = v
       if k in ('f', '--cache-file'): cache_file = expand_cache_file(v)
     target = arg[0]
   except getopt.GetoptError, e:
@@ -294,10 +323,12 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
     print('You need to set profile or classpath', file=sys.stderr)
     help()
 
-  cacher = PackageCacheGenerator(cache_file, classpath)
-  if cacher.needs_update():
-    cacher.update().generate()
-
   with open(target, 'r') as f:
-    for import_ in sorted(ImportSolver(JavaSourceParser(f).parse(), PackageCacheLoader(cache_file).load(), target).solve()):
+    symbols = JavaSourceParser(f).parse()
+
+    cacher = PackageCacheGenerator(cache_file, ClasspathExpander(symbols, target).expand(classpath))
+    if cacher.needs_update():
+      cacher.update().generate()
+
+    for import_ in sorted(ImportSolver(symbols, PackageCacheLoader(cache_file).load(), target).solve()):
       print('import %s;' % import_)

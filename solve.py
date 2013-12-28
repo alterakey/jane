@@ -201,29 +201,18 @@ class PackageCacheGenerator(object):
 
   @staticmethod
   def sprinkle(packages, namespace, source_path):
-    package_root = None
     path = os.path.dirname(os.path.realpath(source_path))
     root = namespace is not None and path.replace(namespace.replace('.', os.sep), '') or path
     for root, dirlist, filelist in os.walk(root):
       if root is None or root != path:
-        if package_root is None:
-          for p in '.', '..':
-            try:
-              with open(os.path.join(root, p, 'AndroidManifest.xml'), 'rb') as f:
-                try:
-                  package_root = ET.parse(f).getroot().attrib['package']
-                except:
-                  print("! cannot parse AndroidManifest.xml: cannot determine package name: %s" % sys.exc_info()[1], file=sys.stderr)
-            except IOError, e:
-              pass
         for filename in filter(lambda x: x.endswith('.java'), filelist):
           with open(os.path.join(root, filename), 'rb') as f:
             dep = JavaSourceParser(f).parse()
             for scope, define in dep.scoped_defines():
               packages[define] = '%s.%s' % (dep.namespace, scope)
 
-    if package_root is not None:
-      packages['*sprinkle:package'] = package_root
+    if namespace is not None:
+      packages['*sprinkle:package'] = ProjectSolver(namespace, source_path).package_name()
 
   def generate(self):
     with gzip.GzipFile(self.cache_file, 'wb') as f:
@@ -243,9 +232,7 @@ class PackageCacheLoader(object):
 
 class ClasspathExpander(object):
   def __init__(self, symbols, target):
-    self.symbols = symbols
-    self.target = target
-    self._cache_project_root = None
+    self.project = ProjectSolver(symbols.namespace, target)
 
   def expand(self, classpath):
     return [p for p in itertools.chain(*[glob.iglob(self.normalize(component)) for component in classpath.split(':')])]
@@ -253,19 +240,39 @@ class ClasspathExpander(object):
   def normalize(self, component):
     expanded = os.path.expanduser(component)
     if not expanded.startswith(os.sep):
-      return os.path.join(self.project_root(), expanded)
+      return self.project.relative_path(expanded)
     else:
       return expanded
 
-  def project_root(self):
-    if self._cache_project_root is None:
+class ProjectSolver(object):
+  def __init__(self, namespace, target):
+    self.namespace = namespace
+    self.target = target
+    self._cache = dict()
+
+  def root_path(self):
+    key = 'root'
+    if key not in self._cache:
       path = os.path.dirname(os.path.realpath(self.target))
-      root = path.replace(self.symbols.namespace.replace('.', os.sep), '')
-      for p in ClasspathExpander.look_parent_to(5):
+      root = path.replace(self.namespace.replace('.', os.sep), '')
+      for p in ProjectSolver.look_parent_to(5):
         look = os.path.join(root, p)
         if os.path.exists(os.path.join(look, 'AndroidManifest.xml')):
-          self._cache_project_root = os.path.realpath(look)
-    return self._cache_project_root
+          self._cache[key] = os.path.realpath(look)
+    return self._cache[key]
+
+  def relative_path(self, filename):
+    return os.path.join(self.root_path(), filename)
+
+  def package_name(self):
+    key = 'package'
+    if key not in self._cache:
+      with open(ProjectSolver(self.namespace, self.target).relative_path('AndroidManifest.xml'), 'rb') as f:
+        try:
+          self._cache[key] = ET.parse(f).getroot().attrib['package']
+        except:
+          print("! cannot parse AndroidManifest.xml: cannot determine package name: %s" % sys.exc_info()[1], file=sys.stderr)
+    return self._cache[key]
 
   @staticmethod
   def look_parent_to(level):

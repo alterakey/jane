@@ -274,6 +274,20 @@ class ProjectSolver(object):
           print("! cannot parse AndroidManifest.xml: cannot determine package name: %s" % sys.exc_info()[1], file=sys.stderr)
     return self._cache[key]
 
+  def profile_name(self):
+    key = 'profile'
+    if key not in self._cache:
+      for filename in glob.iglob(os.path.join(self.root_path(), '*.properties')):
+        with open(filename, 'rb') as f:
+          for line in f:
+            m = re.match(r'^jane.profile\s*=\s*([A-Za-z0-9_]+?)$', line)
+            if m:
+              self._cache[key] = m.group(1)
+              return self._cache[key]
+      else:
+        self._cache[key] = None
+    return self._cache[key]
+
   @staticmethod
   def look_parent_to(level):
     yield '.%s' % os.sep
@@ -286,10 +300,11 @@ if __name__ == '__main__':
 
   classpath = None
   cache_file = 'packages.cache.gz'
+  config_file = None
 
   def help():
     print('''\
-usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path>:...] [--cache-file=<cache file>] <target file>
+usage: %s [--profile=<config file>[:<profile name>]] [--classpath=<jar|source_path>:...] [--cache-file=<cache file>] <target file>
 ''' % sys.argv[0])
     sys.exit(2)
 
@@ -300,22 +315,11 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
     opts, arg = getopt.getopt(sys.argv[1:], 'p:c:f:', ['profile=','classpath=', 'cache-file='])
     for k, v in opts:
       if k in ('p', '--profile'):
-        config_file, profile_name = v.split(':')
-        parser = ConfigParser.SafeConfigParser()
         try:
-          with open(os.path.expanduser(config_file), 'r') as f:
-            parser.readfp(f)
-          try:
-            classpath = parser.get(profile_name, 'classpath')
-          except ConfigParser.NoOptionError:
-            pass
-          try:
-            cache_file = expand_cache_file(parser.get(profile_name, 'cache-file'))
-          except ConfigParser.NoOptionError:
-            pass
-        except ConfigParser.NoSectionError:
-          print('Cannot find profile: %s' % profile_name, file=sys.stderr)
-          help()
+          path, profile = v.split(':')
+        except ValueError:
+          path, profile = v, None
+        config_file = dict(path=path, profile=profile)
       if k in ('c', '--classpath'): classpath = v
       if k in ('f', '--cache-file'): cache_file = expand_cache_file(v)
     target = arg[0]
@@ -326,12 +330,41 @@ usage: %s [--profile=<config file>:<profile name>] [--classpath=<jar|source_path
     print('You need target file', file=sys.stderr)
     help()
 
-  if not classpath:
+  if not classpath and not config_file:
     print('You need to set profile or classpath', file=sys.stderr)
     help()
 
   with open(target, 'r') as f:
     symbols = JavaSourceParser(f).parse()
+    if config_file:
+      path = config_file['path']
+      profile = None
+
+      if config_file['profile'] is not None:
+        profile = config_file['profile']
+      else:
+        profile = ProjectSolver(symbols.namespace, target).profile_name()
+        if not profile:
+          print('You need to explicitly set a profile', file=sys.stderr)
+          help()
+
+      parser = ConfigParser.SafeConfigParser()
+      try:
+        with open(os.path.expanduser(path), 'r') as f:
+          parser.readfp(f)
+        if not classpath:
+          try:
+            classpath = parser.get(profile, 'classpath')
+          except ConfigParser.NoOptionError:
+            pass
+        if not cache_file:
+          try:
+            cache_file = expand_cache_file(parser.get(profile, 'cache-file'))
+          except ConfigParser.NoOptionError:
+            pass
+      except ConfigParser.NoSectionError:
+        print('Cannot find profile: %s' % profile, file=sys.stderr)
+        help()
 
     cacher = PackageCacheGenerator(cache_file, ClasspathExpander(symbols, target).expand(classpath))
     if cacher.needs_update():

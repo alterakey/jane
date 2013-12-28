@@ -235,7 +235,19 @@ class ClasspathExpander(object):
     self.project = ProjectSolver(symbols.namespace, target)
 
   def expand(self, classpath):
-    return [p for p in itertools.chain(*[glob.iglob(self.normalize(component)) for component in classpath.split(':')])]
+    ret = []
+    for path in classpath.split(':'):
+      if not path.startswith('!'):
+        matches = glob.glob(self.normalize(path))
+        ret.extend(matches)
+      else:
+        matches = glob.glob(self.normalize(path[1:]))
+        for p in matches:
+          try:
+            ret.remove(p)
+          except KeyError:
+            pass
+    return ret
 
   def normalize(self, component):
     expanded = os.path.expanduser(component)

@@ -258,7 +258,12 @@ class ClasspathExpander(object):
 
 class ProjectSolver(object):
   def __new__(cls, namespace, target):
-    return GradleProjectSolver(namespace, target)
+    for class_ in GradleProjectSolver, EclipseProjectSolver:
+      try_ = class_(namespace, target)
+      if try_.probe():
+        return try_
+    else:
+      print('! project layout unknown')
 
 class BaseProjectSolver(object):
   def __init__(self, namespace, target):
@@ -286,6 +291,9 @@ class BaseProjectSolver(object):
     for i in xrange(level):
       yield ('..%s' % os.sep) * i
 
+  def probe(self):
+    return os.path.exists(self.relative_path('AndroidManifest.xml'))
+
 class EclipseProjectSolver(BaseProjectSolver):
   def root_path(self):
     key = 'root'
@@ -310,7 +318,6 @@ class EclipseProjectSolver(BaseProjectSolver):
         except:
           print("! cannot parse AndroidManifest.xml: cannot determine package name: %s" % sys.exc_info()[1], file=sys.stderr)
     return self._cache[key]
-
 
 class GradleProjectSolver(BaseProjectSolver):
   def root_path(self):

@@ -257,34 +257,14 @@ class ClasspathExpander(object):
       return expanded
 
 class ProjectSolver(object):
+  def __new__(cls, namespace, target):
+    return GradleProjectSolver(namespace, target)
+
+class BaseProjectSolver(object):
   def __init__(self, namespace, target):
     self.namespace = namespace
     self.target = target
     self._cache = dict()
-
-  def root_path(self):
-    key = 'root'
-    if key not in self._cache:
-      path = os.path.dirname(os.path.realpath(self.target))
-      root = path.replace(self.namespace.replace('.', os.sep), '')
-      for p in ProjectSolver.look_parent_to(5):
-        look = os.path.join(root, p)
-        if os.path.exists(os.path.join(look, 'AndroidManifest.xml')):
-          self._cache[key] = os.path.realpath(look)
-    return self._cache[key]
-
-  def relative_path(self, filename):
-    return os.path.join(self.root_path(), filename)
-
-  def package_name(self):
-    key = 'package'
-    if key not in self._cache:
-      with open(ProjectSolver(self.namespace, self.target).relative_path('AndroidManifest.xml'), 'rb') as f:
-        try:
-          self._cache[key] = ET.parse(f).getroot().attrib['package']
-        except:
-          print("! cannot parse AndroidManifest.xml: cannot determine package name: %s" % sys.exc_info()[1], file=sys.stderr)
-    return self._cache[key]
 
   def profile_name(self):
     key = 'profile'
@@ -305,6 +285,72 @@ class ProjectSolver(object):
     yield '.%s' % os.sep
     for i in xrange(level):
       yield ('..%s' % os.sep) * i
+
+class EclipseProjectSolver(BaseProjectSolver):
+  def root_path(self):
+    key = 'root'
+    if key not in self._cache:
+      path = os.path.dirname(os.path.realpath(self.target))
+      root = path.replace(self.namespace.replace('.', os.sep), '')
+      for p in self.look_parent_to(5):
+        look = os.path.join(root, p)
+        if os.path.exists(os.path.join(look, 'AndroidManifest.xml')):
+          self._cache[key] = os.path.realpath(look)
+    return self._cache[key]
+
+  def relative_path(self, filename):
+    return os.path.join(self.root_path(), filename)
+
+  def package_name(self):
+    key = 'package'
+    if key not in self._cache:
+      with open(ProjectSolver(self.namespace, self.target).relative_path('AndroidManifest.xml'), 'rb') as f:
+        try:
+          self._cache[key] = ET.parse(f).getroot().attrib['package']
+        except:
+          print("! cannot parse AndroidManifest.xml: cannot determine package name: %s" % sys.exc_info()[1], file=sys.stderr)
+    return self._cache[key]
+
+
+class GradleProjectSolver(BaseProjectSolver):
+  def root_path(self):
+    key = 'root'
+    if key not in self._cache:
+      self._cache[key] = os.path.realpath(os.path.join(self.module_path(), '..'))
+    return self._cache[key]
+
+  def module_path(self):
+    key = 'module'
+    if key not in self._cache:
+      self._cache[key] = os.path.realpath(os.path.join(self.main_src_path(), '../..'))
+    return self._cache[key]
+    
+  def main_src_path(self):
+    key = 'src'
+    if key not in self._cache:
+      path = os.path.dirname(os.path.realpath(self.target))
+      root = path.replace(self.namespace.replace('.', os.sep), '')
+      for p in self.look_parent_to(5):
+        look = os.path.join(root, p)
+        if os.path.exists(os.path.join(look, 'AndroidManifest.xml')):
+          self._cache[key] = os.path.realpath(look)
+    return self._cache[key]
+
+  def relative_path(self, filename):
+    return os.path.join(self.root_path(), filename)
+
+  def main_src_relative_path(self, filename):
+    return os.path.join(self.main_src_path(), filename)
+
+  def package_name(self):
+    key = 'package'
+    if key not in self._cache:
+      with open(ProjectSolver(self.namespace, self.target).main_src_relative_path('AndroidManifest.xml'), 'rb') as f:
+        try:
+          self._cache[key] = ET.parse(f).getroot().attrib['package']
+        except:
+          print("! cannot parse AndroidManifest.xml: cannot determine package name: %s" % sys.exc_info()[1], file=sys.stderr)
+    return self._cache[key]
 
 if __name__ == '__main__':
   import sys

@@ -75,6 +75,7 @@ If you use emacs, you could put the following to your .emacs to get your lengthy
 2. BUGS
 =======
 
+ * Doesn't parse Gradle recipe; no declarative dependencies (e.g. Gradle-based requires,) no external libraries (i.e. they have no standardized pathes, I guess)
  * Doesn't recognize static inner classes deeper than 1 level.
  * Symbol recognition logic is stupid and reckless.
  * Assumes some degree of AOSP-ish naming scheme is in use
